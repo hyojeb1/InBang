@@ -1,0 +1,442 @@
+
+<title>네페르 버튜버 셋업 가이드</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #0d0d0d;
+    color: #e8e8e8;
+    line-height: 1.6;
+    padding: 2rem 1rem;
+  }
+  .container { max-width: 860px; margin: 0 auto; }
+
+  header {
+    border-bottom: 2px solid #c9a84c;
+    padding-bottom: 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+  header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #c9a84c;
+    letter-spacing: -0.5px;
+  }
+  header p {
+    color: #888;
+    margin-top: 0.4rem;
+    font-size: 0.95rem;
+  }
+  .badge {
+    display: inline-block;
+    background: #1a1a1a;
+    border: 1px solid #c9a84c44;
+    color: #c9a84c;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    margin-right: 0.4rem;
+    margin-top: 0.6rem;
+  }
+
+  .pipeline {
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 2.5rem;
+    overflow-x: auto;
+  }
+  .pipeline-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #555;
+    margin-bottom: 0.8rem;
+  }
+  .pipeline-flow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+  }
+  .pipe-node {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 0.4rem 0.8rem;
+    white-space: nowrap;
+    color: #ddd;
+  }
+  .pipe-node.accent { border-color: #c9a84c66; color: #c9a84c; }
+  .pipe-arrow { color: #444; font-size: 1rem; }
+
+  .section {
+    margin-bottom: 2.5rem;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1.2rem;
+  }
+  .step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #c9a84c;
+    color: #000;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .section-header h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .card {
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 0.8rem;
+  }
+  .card h3 {
+    font-size: 0.85rem;
+    color: #c9a84c;
+    margin-bottom: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  code, pre {
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+    font-size: 0.85rem;
+  }
+  pre {
+    background: #0a0a0a;
+    border: 1px solid #222;
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    color: #b8c4cc;
+    line-height: 1.7;
+  }
+  .comment { color: #4a5568; }
+  .kw { color: #c9a84c; }
+  .str { color: #68d391; }
+
+  ul {
+    padding-left: 1.2rem;
+    color: #ccc;
+  }
+  ul li { margin-bottom: 0.4rem; }
+  ul li::marker { color: #c9a84c; }
+
+  .check-list {
+    list-style: none;
+    padding: 0;
+  }
+  .check-list li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #1a1a1a;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    color: #ccc;
+    font-size: 0.9rem;
+  }
+  .check-list li:last-child { border-bottom: none; }
+  .check-box {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid #333;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .status-bar {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 2.5rem;
+  }
+  .status-item {
+    flex: 1;
+    min-width: 140px;
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  .status-label { font-size: 0.7rem; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.3rem; }
+  .status-value { font-size: 0.95rem; color: #e8e8e8; font-weight: 500; }
+  .status-value.done { color: #68d391; }
+  .status-value.pending { color: #c9a84c; }
+  .status-value.blocked { color: #fc8181; }
+
+  .goal-box {
+    background: linear-gradient(135deg, #1a1408, #111);
+    border: 1px solid #c9a84c44;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-top: 2.5rem;
+    text-align: center;
+  }
+  .goal-box h2 { color: #c9a84c; font-size: 1rem; margin-bottom: 0.5rem; }
+  .goal-box p { color: #999; font-size: 0.9rem; }
+  .goal-date { font-size: 1.4rem; font-weight: 700; color: #fff; margin: 0.5rem 0; }
+
+  .tag-done { color: #68d391; font-size: 0.75rem; margin-left: 0.5rem; }
+  .tag-blocked { color: #fc8181; font-size: 0.75rem; margin-left: 0.5rem; }
+</style>
+
+<div class="container">
+
+  <header>
+    <h1>네페르 버튜버 셋업</h1>
+    <p>치지직 스트리밍 → 하이라이트 → 유튜브 파이프라인</p>
+    <span class="badge">UE 5.7</span>
+    <span class="badge">OBS</span>
+    <span class="badge">whisper.cpp</span>
+    <span class="badge">Huion Key-Dial</span>
+    <span class="badge">치지직</span>
+  </header>
+
+  <div class="pipeline">
+    <div class="pipeline-title">전체 파이프라인</div>
+    <div class="pipeline-flow">
+      <div class="pipe-node accent">Unreal 5.7<br><small>그린스크린 렌더</small></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node">OBS<br><small>크로마키 + 녹화</small></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node">치지직<br><small>라이브 1.5h</small></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node">ffmpeg<br><small>마이크 트랙 추출</small></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node">whisper.cpp<br><small>타임스탬프 인덱싱</small></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node accent">유튜브<br><small>하이라이트 업로드</small></div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="status-label">플랫폼</div>
+      <div class="status-value done">치지직 ✓</div>
+    </div>
+    <div class="status-item">
+      <div class="status-label">UE 프로젝트</div>
+      <div class="status-value done">InBang.uproject ✓</div>
+    </div>
+    <div class="status-item">
+      <div class="status-label">그린스크린 레벨</div>
+      <div class="status-value done">Lvl_GreenScreen ✓</div>
+    </div>
+    <div class="status-item">
+      <div class="status-label">네페르 메시</div>
+      <div class="status-value blocked">아트팀 허락 대기</div>
+    </div>
+    <div class="status-item">
+      <div class="status-label">음성</div>
+      <div class="status-value pending">미결정</div>
+    </div>
+    <div class="status-item">
+      <div class="status-label">G-STAR</div>
+      <div class="status-value pending">2026.11.19 D-153</div>
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="step-num">1</div>
+      <h2>Unreal — 그린스크린 레벨 세팅</h2>
+    </div>
+
+    <div class="card">
+      <h3>카메라 배치</h3>
+      <ul>
+        <li>CineCamera Actor 배치 → 버스트/가슴 앵글 고정</li>
+        <li>Auto Activate 켜기 → 게임 시작 시 자동 전환</li>
+        <li>Field of View: 35~50mm 권장 (버튜버 느낌)</li>
+        <li>Lock to HMD: Off</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>그린스크린 머티리얼 확인</h3>
+      <ul>
+        <li>배경 전체 <code>M_GreenScreen</code> 또는 단색 #00FF00 적용 확인</li>
+        <li>캐릭터에 그린이 묻지 않게 조명 방향 주의</li>
+        <li>ToonShade 머티리얼 적용 시 외곽선 색상 확인</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>실행 설정</h3>
+      <pre><span class="comment"># 에디터 없이 창모드로 실행 (OBS 캡처용)</span>
+UnrealEditor.exe InBang.uproject <span class="kw">-game</span> <span class="kw">-windowed</span> <span class="kw">-ResX=1920</span> <span class="kw">-ResY=1080</span></pre>
+      <p style="margin-top:0.8rem; font-size:0.85rem; color:#666;">또는 에디터에서 Play → Standalone Game</p>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="step-num">2</div>
+      <h2>표정 전환 — Huion Key-Dial + Blueprint</h2>
+    </div>
+
+    <div class="card">
+      <h3>Huion Key-Dial 매핑</h3>
+      <p style="font-size:0.9rem; color:#999; margin-bottom:0.8rem;">Huion 소프트웨어에서 버튼 두 개를 키보드 키로 지정</p>
+      <pre>버튼 1  →  키보드 <span class="str">F1</span>  (기본 표정 / Neutral)
+버튼 2  →  키보드 <span class="str">F2</span>  (반응 표정 / Alt)</pre>
+    </div>
+
+    <div class="card">
+      <h3>Enhanced Input 설정</h3>
+      <ul>
+        <li>Content/Input/IMC_Default.uasset 열기</li>
+        <li>Input Action 추가: <code>IA_Expr_Neutral</code>, <code>IA_Expr_Alt</code></li>
+        <li>각각 F1, F2 키 바인딩</li>
+        <li>Trigger: Pressed</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Level Blueprint — 표정 전환 로직</h3>
+      <pre><span class="comment">// IA_Expr_Neutral Triggered</span>
+Get Skeletal Mesh Component (네페르)
+  → Set Morph Target (<span class="str">"expr_neutral"</span>, 1.0)
+  → Set Morph Target (<span class="str">"expr_alt"</span>, 0.0)
+
+<span class="comment">// IA_Expr_Alt Triggered</span>
+Get Skeletal Mesh Component (네페르)
+  → Set Morph Target (<span class="str">"expr_neutral"</span>, 0.0)
+  → Set Morph Target (<span class="str">"expr_alt"</span>, 1.0)</pre>
+      <p style="margin-top:0.8rem; font-size:0.85rem; color:#666;">아트팀 허락 전: 임시 메시 + 임의 모프타겟 이름으로 파이프라인만 테스트</p>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="step-num">3</div>
+      <h2>OBS 세팅</h2>
+    </div>
+
+    <div class="card">
+      <h3>소스 구성</h3>
+      <ul>
+        <li><strong>창 캡처</strong> → Unreal Standalone 창 선택</li>
+        <li>필터 → <strong>크로마키</strong> → 색상: #00FF00, 유사도 400, 부드러움 80</li>
+        <li>게임 캡처 레이어 위에 오버레이로 배치</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>오디오 트랙 분리 (핵심)</h3>
+      <pre>설정 → 출력 → 녹화 → 오디오 트랙
+  트랙 1: 전체 믹스  <span class="comment">(스트림 + 녹화)</span>
+  트랙 2: 마이크만   <span class="comment">(whisper.cpp 전용 — 방송엔 안 나감)</span></pre>
+    </div>
+
+    <div class="card">
+      <h3>치지직 RTMP 설정</h3>
+      <ul>
+        <li>설정 → 방송 → 서비스: 사용자 지정</li>
+        <li>서버: <code>rtmp://rtmp-push.chzzk.naver.com/live</code></li>
+        <li>스트림 키: 치지직 대시보드에서 발급</li>
+        <li>권장 비트레이트: 6000~8000 Kbps</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="step-num">4</div>
+      <h2>whisper.cpp — 하이라이트 인덱싱 파이프라인</h2>
+    </div>
+
+    <div class="card">
+      <h3>설치</h3>
+      <pre>git clone https://github.com/ggerganov/whisper.cpp
+cd whisper.cpp
+make <span class="comment"># CUDA 있으면: make WHISPER_CUBLAS=1</span>
+bash ./models/download-ggml-model.sh large-v3</pre>
+    </div>
+
+    <div class="card">
+      <h3>방송 후 처리 스크립트</h3>
+      <pre>#!/bin/bash
+<span class="comment"># process.sh &lt;녹화파일.mkv&gt;</span>
+INPUT=<span class="str">"$1"</span>
+STEM=<span class="str">"${INPUT%.*}"</span>
+
+<span class="comment"># 마이크 트랙(2번)만 추출</span>
+ffmpeg -i <span class="str">"$INPUT"</span> -map 0:a:1 -ar 16000 -ac 1 <span class="str">"${STEM}_mic.wav"</span>
+
+<span class="comment"># 한국어 변환 + 타임스탬프</span>
+./whisper.cpp/main \
+  -m ./whisper.cpp/models/ggml-large-v3.bin \
+  -l ko \
+  -f <span class="str">"${STEM}_mic.wav"</span> \
+  --output-srt \
+  --output-txt
+
+echo <span class="str">"완료: ${STEM}_mic.wav.srt"</span></pre>
+    </div>
+
+    <div class="card">
+      <h3>하이라이트 찾는 법</h3>
+      <ul>
+        <li><code>.srt</code> 파일에서 재밌는 대사 타임스탬프 확인</li>
+        <li>해당 구간 ±30초 영상 컷</li>
+        <li>유튜브 쇼츠 or 일반 영상으로 업로드</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 체크리스트 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="step-num" style="background:#333; color:#888;">✓</div>
+      <h2>진행 체크리스트</h2>
+    </div>
+    <div class="card">
+      <ul class="check-list">
+        <li><div class="check-box" style="background:#1a3a2a; border-color:#68d391;"></div>UE 5.7 프로젝트 생성 (InBang.uproject)</li>
+        <li><div class="check-box" style="background:#1a3a2a; border-color:#68d391;"></div>Lvl_GreenScreen 레벨 준비</li>
+        <li><div class="check-box" style="background:#1a3a2a; border-color:#68d391;"></div>Enhanced Input (IMC_Default) 세팅</li>
+        <li><div class="check-box"></div>CineCamera 배치 및 앵글 확정</li>
+        <li><div class="check-box"></div>Huion Key-Dial F1/F2 키 매핑</li>
+        <li><div class="check-box"></div>IA_Expr_Neutral / IA_Expr_Alt 입력 액션 추가</li>
+        <li><div class="check-box"></div>Level Blueprint 표정 전환 로직 작성</li>
+        <li><div class="check-box"></div>OBS 창 캡처 + 크로마키 설정</li>
+        <li><div class="check-box"></div>OBS 오디오 트랙 2번 마이크 분리</li>
+        <li><div class="check-box"></div>치지직 RTMP 스트림 키 연결</li>
+        <li><div class="check-box"></div>whisper.cpp 빌드 + 모델 다운로드</li>
+        <li><div class="check-box"></div>process.sh 테스트</li>
+        <li><div class="check-box" style="background:#1a1408; border-color:#c9a84c44;"></div>아트팀 허락 → 네페르 메시 + 표정 적용</li>
+        <li><div class="check-box" style="background:#1a1408; border-color:#c9a84c44;"></div>첫 방송 날짜 확정</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="goal-box">
+    <h2>최종 목표</h2>
+    <div class="goal-date">G-STAR 2026 — 11월 19일</div>
+    <p>네페르 버튜버 채널 → 부스 등신대<br>온라인 캐릭터가 오프라인에 등장하는 순간</p>
+  </div>
+
+</div>

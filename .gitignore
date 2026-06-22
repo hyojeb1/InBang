@@ -1,0 +1,20 @@
+# Unreal Engine generated files
+InBang/Binaries/
+InBang/Build/
+InBang/DerivedDataCache/
+InBang/Intermediate/
+InBang/Saved/
+
+# User/local editor state
+.claude/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# OS files
+.DS_Store
+Thumbs.db
+
