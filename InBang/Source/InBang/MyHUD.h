@@ -11,4 +11,12 @@ class INBANG_API AMyHUD : public AHUD
 
 public:
 	AMyHUD();
+
+	virtual void BeginPlay() override;
+
+	class ULeDuatInGameWidget* GetLeDuatWidget() const { return LeDuatWidget; }
+
+private:
+	UPROPERTY()
+	TObjectPtr<class ULeDuatInGameWidget> LeDuatWidget;
 };

@@ -12,6 +12,24 @@ class INBANG_API AMyPlayerController : public APlayerController
 public:
 	AMyPlayerController();
 
+	UFUNCTION(Exec)
+	void LeDuatToggleMission();
+
+	UFUNCTION(Exec)
+	void LeDuatToggleInventory();
+
+	UFUNCTION(Exec)
+	void LeDuatToggleCollection();
+
+	UFUNCTION(Exec)
+	void LeDuatToggleGod();
+
+	UFUNCTION(Exec)
+	void LeDuatToggleGodChat();
+
+	UFUNCTION(Exec)
+	void LeDuatToggleEscMenu();
+
 protected:
 	virtual void SetupInputComponent() override;
 
@@ -22,6 +40,8 @@ protected:
 	void OnAltExpressionRequested();
 
 private:
+	class ULeDuatInGameWidget* GetLeDuatWidget() const;
+
 	void HandleNeutralExpression();
 	void HandleAltExpression();
 };
