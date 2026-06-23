@@ -4,11 +4,17 @@ InBang/Build/
 InBang/DerivedDataCache/
 InBang/Intermediate/
 InBang/Saved/
+InBang/Plugins/*/Binaries/
+InBang/Plugins/*/Intermediate/
 
 # User/local editor state
 .claude/
+.vs/
+InBang/.vs/
 .vscode/
 .idea/
+*.sln
+*.vsconfig
 *.suo
 *.user
 *.userosscache
@@ -17,4 +23,3 @@ InBang/Saved/
 # OS files
 .DS_Store
 Thumbs.db
-
