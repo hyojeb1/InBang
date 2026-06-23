@@ -286,6 +286,16 @@
 UnrealEditor.exe InBang.uproject <span class="kw">-game</span> <span class="kw">-windowed</span> <span class="kw">-ResX=1920</span> <span class="kw">-ResY=1080</span></pre>
       <p style="margin-top:0.8rem; font-size:0.85rem; color:#666;">또는 에디터에서 Play → Standalone Game</p>
     </div>
+
+    <div class="card">
+      <h3>진행 상태 — 일단 완료</h3>
+      <ul>
+        <li>C++ 기본 클래스 생성: <code>MyGameMode</code>, <code>MyPlayerController</code>, <code>MyCharacter</code>, <code>MyHUD</code></li>
+        <li><code>GlobalDefaultGameMode</code>를 <code>/Script/InBang.MyGameMode</code>로 연결</li>
+        <li><code>GameDefaultMap</code>, <code>EditorStartupMap</code>은 <code>/Game/Lvl_GreenScreen</code> 유지</li>
+        <li>방송용 그린스크린 레벨을 방해하지 않도록 <code>MyCharacter</code>에는 이동 입력을 넣지 않음</li>
+      </ul>
+    </div>
   </div>
 
   <!-- STEP 2 -->
@@ -324,6 +334,16 @@ Get Skeletal Mesh Component (네페르)
   → Set Morph Target (<span class="str">"expr_neutral"</span>, 0.0)
   → Set Morph Target (<span class="str">"expr_alt"</span>, 1.0)</pre>
       <p style="margin-top:0.8rem; font-size:0.85rem; color:#666;">아트팀 허락 전: 임시 메시 + 임의 모프타겟 이름으로 파이프라인만 테스트</p>
+    </div>
+
+    <div class="card">
+      <h3>진행 상태 — C++ 훅 완료</h3>
+      <ul>
+        <li><code>MyPlayerController</code>에서 <code>F1</code>, <code>F2</code> 키 입력을 바인딩</li>
+        <li><code>F1</code> 입력 시 <code>OnNeutralExpressionRequested</code> Blueprint 이벤트 호출</li>
+        <li><code>F2</code> 입력 시 <code>OnAltExpressionRequested</code> Blueprint 이벤트 호출</li>
+        <li>아직 실제 모프타겟/애니메이션 전환은 BP에서 연결 필요</li>
+      </ul>
     </div>
   </div>
 
@@ -417,9 +437,12 @@ echo <span class="str">"완료: ${STEM}_mic.wav.srt"</span></pre>
       <ul class="check-list">
         <li><div class="check-box" style="background:#1a3a2a; border-color:#68d391;"></div>UE 5.7 프로젝트 생성 (InBang.uproject)</li>
         <li><div class="check-box" style="background:#1a3a2a; border-color:#68d391;"></div>Lvl_GreenScreen 레벨 준비</li>
+        <li><div class="check-box" style="background:#1a3a2a; border-color:#68d391;"></div>MyGameMode / MyPlayerController / MyCharacter / MyHUD C++ 뼈대 생성</li>
+        <li><div class="check-box" style="background:#1a3a2a; border-color:#68d391;"></div>GlobalDefaultGameMode를 MyGameMode로 연결</li>
         <li><div class="check-box" style="background:#1a3a2a; border-color:#68d391;"></div>Enhanced Input (IMC_Default) 세팅</li>
         <li><div class="check-box"></div>CineCamera 배치 및 앵글 확정</li>
         <li><div class="check-box"></div>Huion Key-Dial F1/F2 키 매핑</li>
+        <li><div class="check-box" style="background:#1a3a2a; border-color:#68d391;"></div>F1/F2 입력 → 표정 전환용 Blueprint 이벤트 호출 훅 작성</li>
         <li><div class="check-box"></div>IA_Expr_Neutral / IA_Expr_Alt 입력 액션 추가</li>
         <li><div class="check-box"></div>Level Blueprint 표정 전환 로직 작성</li>
         <li><div class="check-box"></div>OBS 창 캡처 + 크로마키 설정</li>
