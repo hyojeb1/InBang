@@ -41,6 +41,10 @@
 		{
 			"Name": "Calculator",
 			"Enabled": true
+		},
+		{
+			"Name": "CommonUI",
+			"Enabled": true
 		}
 	]
 }
