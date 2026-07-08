@@ -4,7 +4,17 @@
 #include "GameFramework/PlayerController.h"
 #include "MyPlayerController.generated.h"
 
-UCLASS()
+class ACineCameraActor;
+
+/**
+ * 버튜버 방송용 컨트롤러.
+ * BeginPlay에서 알아서 방송 무대를 구성하므로 BP 작업이 필요 없다:
+ *  1. 레벨에서 네페르(태그 "Nefer" 또는 첫 번째 캐릭터)를 찾고
+ *  2. 카메라가 없으면 버스트샷 CineCamera를 자동 생성하고
+ *  3. 그린스크린 배경 판을 자동 생성한다.
+ * F1/F2 = 표정 전환. 세부 값은 DefaultGame.ini [/Script/InBang.MyPlayerController]에서 수정.
+ */
+UCLASS(Config = Game)
 class INBANG_API AMyPlayerController : public APlayerController
 {
 	GENERATED_BODY()
@@ -12,36 +22,103 @@ class INBANG_API AMyPlayerController : public APlayerController
 public:
 	AMyPlayerController();
 
-	UFUNCTION(Exec)
-	void LeDuatToggleMission();
+	virtual void BeginPlay() override;
 
-	UFUNCTION(Exec)
-	void LeDuatToggleInventory();
+	// --- ` 콘솔 명령 (방송 중 실시간 튜닝용) ---
 
+	// 네페르 메시의 모든 모프타겟 이름을 화면/로그에 출력
 	UFUNCTION(Exec)
-	void LeDuatToggleCollection();
+	void ListMorphs();
 
+	// 모프타겟 하나를 직접 지정해 실험: Expr eye_blink 1.0
 	UFUNCTION(Exec)
-	void LeDuatToggleGod();
+	void Expr(FName MorphTarget, float Value);
 
+	// 카메라 거리(cm): CamDist 200
 	UFUNCTION(Exec)
-	void LeDuatToggleGodChat();
+	void CamDist(float Distance);
 
+	// 카메라 높이 비율(0=발끝, 1=정수리): CamHeight 0.75
 	UFUNCTION(Exec)
-	void LeDuatToggleEscMenu();
+	void CamHeight(float Ratio);
+
+	// 초점거리(mm): CamFocal 35
+	UFUNCTION(Exec)
+	void CamFocal(float FocalLength);
 
 protected:
 	virtual void SetupInputComponent() override;
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "Expression")
+	// 모프타겟 전환 외에 추가 연출이 필요할 때만 BP에서 구현하는 선택 훅
+	UFUNCTION(BlueprintImplementableEvent, Category = "Broadcast|Expression")
 	void OnNeutralExpressionRequested();
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "Expression")
+	UFUNCTION(BlueprintImplementableEvent, Category = "Broadcast|Expression")
 	void OnAltExpressionRequested();
 
+	// --- 설정 (DefaultGame.ini에서 수정 가능) ---
+
+	// 방송 주인공을 찾을 액터 태그. 없으면 내 폰이 아닌 첫 스켈레탈 캐릭터 사용
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast")
+	FName TalentActorTag = TEXT("Nefer");
+
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Expression")
+	FName NeutralMorphTargetName = TEXT("expr_neutral");
+
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Expression")
+	FName AltMorphTargetName = TEXT("expr_alt");
+
+	// 이 태그가 붙은 카메라가 레벨에 있으면 그걸 쓰고, 없으면 자동 생성
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera")
+	FName CameraActorTag = TEXT("BroadcastCamera");
+
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera")
+	float CameraDistance = 140.f;
+
+	// 카메라가 바라보는 높이. 0=발끝, 1=정수리 (버스트샷 ≈ 0.8)
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera")
+	float CameraFocusHeightRatio = 0.8f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera")
+	float CameraFocalLength = 50.f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen")
+	bool bSpawnGreenScreenBackdrop = true;
+
+	// 이 태그가 붙은 액터가 이미 있으면 배경을 새로 만들지 않음
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen")
+	FName BackdropActorTag = TEXT("GreenScreen");
+
+	// 캐릭터 뒤로 배경 판을 놓을 거리(cm)
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen")
+	float BackdropDistance = 300.f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen")
+	FLinearColor BackdropColor = FLinearColor(0.f, 1.f, 0.f);
+
+	// 언릿 단색 머티리얼 에셋을 만들면 여기 경로로 자동 사용 (크로마키 품질 ↑).
+	// 없으면 엔진 기본 머티리얼 + BackdropColor로 대체
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen")
+	FSoftObjectPath BackdropMaterialPath = FSoftObjectPath(TEXT("/Game/M_GreenScreen.M_GreenScreen"));
+
 private:
-	class ULeDuatInGameWidget* GetLeDuatWidget() const;
+	void FindTalent();
+	void SetupBroadcastCamera();
+	void SpawnBackdrop();
+	void RefreshCameraTransform();
+
+	class USkeletalMeshComponent* GetTalentMesh() const;
+	FVector GetFocusLocation() const;
+	void ApplyExpression(float NeutralWeight, float AltWeight);
 
 	void HandleNeutralExpression();
 	void HandleAltExpression();
+
+	UPROPERTY()
+	TObjectPtr<AActor> TalentActor;
+
+	UPROPERTY()
+	TObjectPtr<ACineCameraActor> BroadcastCamera;
+
+	bool bWarnedMissingMorphs = false;
 };
