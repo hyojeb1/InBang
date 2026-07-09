@@ -12,7 +12,8 @@ class ACineCameraActor;
  *  1. 레벨에서 네페르(태그 "Nefer" 또는 첫 번째 캐릭터)를 찾고
  *  2. 카메라가 없으면 버스트샷 CineCamera를 자동 생성하고
  *  3. 그린스크린 배경 판을 자동 생성한다.
- * F1/F2 = 표정 전환. 세부 값은 DefaultGame.ini [/Script/InBang.MyPlayerController]에서 수정.
+ * F1~F12 = ExpressionSlots에 정의된 표정 프리셋 전환.
+ * 세부 값은 DefaultGame.ini [/Script/InBang.MyPlayerController]에서 수정.
  */
 UCLASS(Config = Game)
 class INBANG_API AMyPlayerController : public APlayerController
@@ -24,13 +25,17 @@ public:
 
 	virtual void BeginPlay() override;
 
+	// 표정 슬롯 적용 (0 = F1). 콘솔/BP 어디서든 호출 가능
+	UFUNCTION(Exec, BlueprintCallable, Category = "Broadcast|Expression")
+	void Face(int32 SlotIndex);
+
 	// --- ` 콘솔 명령 (방송 중 실시간 튜닝용) ---
 
 	// 네페르 메시의 모든 모프타겟 이름을 화면/로그에 출력
 	UFUNCTION(Exec)
 	void ListMorphs();
 
-	// 모프타겟 하나를 직접 지정해 실험: Expr eye_blink 1.0
+	// 모프타겟 하나를 직접 실험: Expr Eye_Joy_L 1.0
 	UFUNCTION(Exec)
 	void Expr(FName MorphTarget, float Value);
 
@@ -49,12 +54,9 @@ public:
 protected:
 	virtual void SetupInputComponent() override;
 
-	// 모프타겟 전환 외에 추가 연출이 필요할 때만 BP에서 구현하는 선택 훅
+	// 표정 전환에 추가 연출(사운드, 파티클 등)이 필요할 때만 BP에서 구현하는 선택 훅
 	UFUNCTION(BlueprintImplementableEvent, Category = "Broadcast|Expression")
-	void OnNeutralExpressionRequested();
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "Broadcast|Expression")
-	void OnAltExpressionRequested();
+	void OnExpressionChanged(int32 SlotIndex);
 
 	// --- 설정 (DefaultGame.ini에서 수정 가능) ---
 
@@ -62,11 +64,10 @@ protected:
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast")
 	FName TalentActorTag = TEXT("Nefer");
 
+	// 표정 프리셋. 배열 순서대로 F1, F2, ... 에 바인딩된다.
+	// 형식: "모프이름,모프이름=0.5" (가중치 생략 시 1.0), "None" = 기본 표정
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Expression")
-	FName NeutralMorphTargetName = TEXT("expr_neutral");
-
-	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Expression")
-	FName AltMorphTargetName = TEXT("expr_alt");
+	TArray<FString> ExpressionSlots;
 
 	// 이 태그가 붙은 카메라가 레벨에 있으면 그걸 쓰고, 없으면 자동 생성
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera")
@@ -102,6 +103,7 @@ protected:
 	FSoftObjectPath BackdropMaterialPath = FSoftObjectPath(TEXT("/Game/M_GreenScreen.M_GreenScreen"));
 
 private:
+	void SetupStage();
 	void FindTalent();
 	void SetupBroadcastCamera();
 	void SpawnBackdrop();
@@ -109,10 +111,9 @@ private:
 
 	class USkeletalMeshComponent* GetTalentMesh() const;
 	FVector GetFocusLocation() const;
-	void ApplyExpression(float NeutralWeight, float AltWeight);
 
-	void HandleNeutralExpression();
-	void HandleAltExpression();
+	// "모프이름=가중치,..." 문자열을 파싱해 적용. 이전 표정은 자동 리셋
+	void ApplyExpressionString(const FString& Expression);
 
 	UPROPERTY()
 	TObjectPtr<AActor> TalentActor;
@@ -120,5 +121,9 @@ private:
 	UPROPERTY()
 	TObjectPtr<ACineCameraActor> BroadcastCamera;
 
-	bool bWarnedMissingMorphs = false;
+	// 표정 전환 시 리셋해야 하는, 지금까지 건드린 모프들
+	TSet<FName> TouchedMorphs;
+
+	bool bCameraReady = false;
+	bool bBackdropReady = false;
 };

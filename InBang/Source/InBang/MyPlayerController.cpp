@@ -4,6 +4,7 @@
 #include "Camera/CameraActor.h"
 #include "CineCameraActor.h"
 #include "CineCameraComponent.h"
+#include "Components/InputComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Engine.h"
@@ -15,37 +16,124 @@
 #include "InputCoreTypes.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
+#include "TimerManager.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogInBang, Log, All);
+
+namespace
+{
+	// 액터의 스켈레탈 메시 컴포넌트 중 실제 메시 에셋이 있는 첫 번째를 반환.
+	// (BP_Nefer는 캐릭터 기본 Mesh가 아닌 자식 컴포넌트에 메시가 붙어있다)
+	USkeletalMeshComponent* FindMeshWithAsset(const AActor* Actor)
+	{
+		if (!Actor)
+		{
+			return nullptr;
+		}
+
+		TInlineComponentArray<USkeletalMeshComponent*> Components(Actor);
+		for (USkeletalMeshComponent* Component : Components)
+		{
+			if (Component && Component->GetSkeletalMeshAsset())
+			{
+				return Component;
+			}
+		}
+		return nullptr;
+	}
+}
 
 AMyPlayerController::AMyPlayerController()
 {
 	bShowMouseCursor = false;
 	// 폰 빙의 시 뷰타겟이 폰으로 돌아가지 않도록 직접 관리
 	bAutoManageActiveCameraTarget = false;
+
+	// F1부터 순서대로. DefaultGame.ini의 +ExpressionSlots가 있으면 그쪽이 우선
+	ExpressionSlots = {
+		TEXT("None"),                                               // 1키 : 기본
+		TEXT("Eye_Smile_Closed_L,Eye_Smile_Closed_R,Mouth_Smile"),  // 2키 : 스마일
+		TEXT("Eye_Joy_L,Eye_Joy_R,Mouth_joy"),                      // 3키 : 기쁨
+		TEXT("Eye_Star_L,Eye_Star_R,Mouth_A"),                      // 4키 : 반짝
+		TEXT("Brow_Angry_L,Brow_Angry_R,Mouth_Angry"),              // 5키 : 화남
+		TEXT("Brow_Sad_L,Brow_Sad_R,Mouth_Sad"),                    // 6키 : 슬픔
+	};
 }
 
 void AMyPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	FindTalent();
-	SetupBroadcastCamera();
+	SetupStage();
 
-	if (bSpawnGreenScreenBackdrop)
+	// 다른 액터의 초기화가 아직 안 끝났을 수 있으니 못 찾았으면 한 번 재시도
+	if (!TalentActor)
 	{
-		SpawnBackdrop();
+		FTimerHandle RetryHandle;
+		GetWorldTimerManager().SetTimer(RetryHandle, this, &AMyPlayerController::SetupStage, 0.5f, false);
 	}
-
-	ApplyExpression(1.f, 0.f);
 }
 
+//! \brief 언리얼 엔진의 F1
+//void AMyPlayerController::SetupInputComponent()
+//{
+//	Super::SetupInputComponent();
+//
+//	const int32 NumSlots = FMath::Min(ExpressionSlots.Num(), 12);
+//	for (int32 Index = 0; Index < NumSlots; ++Index)
+//	{
+//		const FKey Key(*FString::Printf(TEXT("F%d"), Index + 1));
+//		FInputKeyBinding Binding(FInputChord(Key), IE_Pressed);
+//		Binding.KeyDelegate.GetDelegateForManualSet().BindWeakLambda(this, [this, Index]()
+//		{
+//			Face(Index);
+//		});
+//		InputComponent->KeyBindings.Add(MoveTemp(Binding));
+//	}
+//}
+
+//! \brief 언리얼 엔진의 넘패드 키
 void AMyPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
-	InputComponent->BindKey(EKeys::F1, IE_Pressed, this, &AMyPlayerController::HandleNeutralExpression);
-	InputComponent->BindKey(EKeys::F2, IE_Pressed, this, &AMyPlayerController::HandleAltExpression);
+	// 언리얼 엔진의 넘패드 키 정의를 배열로 미리 준비합니다.
+	const TArray<FKey> NumPadKeys = {
+		EKeys::NumPadZero, EKeys::NumPadOne, EKeys::NumPadTwo, EKeys::NumPadThree, EKeys::NumPadFour,
+		EKeys::NumPadFive, EKeys::NumPadSix, EKeys::NumPadSeven, EKeys::NumPadEight, EKeys::NumPadNine
+	};
+
+	// 표정 개수와 넘패드 키 개수(10개) 중 더 적은 값만큼 루프
+	const int32 NumSlots = FMath::Min(ExpressionSlots.Num(), NumPadKeys.Num());
+
+	for (int32 Index = 0; Index < NumSlots; ++Index)
+	{
+		FInputKeyBinding Binding(FInputChord(NumPadKeys[Index]), IE_Pressed);
+		Binding.KeyDelegate.GetDelegateForManualSet().BindWeakLambda(this, [this, Index]()
+			{
+				Face(Index);
+			});
+		InputComponent->KeyBindings.Add(MoveTemp(Binding));
+	}
+}
+
+void AMyPlayerController::SetupStage()
+{
+	if (!TalentActor)
+	{
+		FindTalent();
+	}
+
+	if (!bCameraReady)
+	{
+		SetupBroadcastCamera();
+	}
+
+	if (bSpawnGreenScreenBackdrop && !bBackdropReady && TalentActor)
+	{
+		SpawnBackdrop();
+		bBackdropReady = true;
+	}
 }
 
 void AMyPlayerController::FindTalent()
@@ -71,8 +159,7 @@ void AMyPlayerController::FindTalent()
 				continue;
 			}
 
-			const USkeletalMeshComponent* Mesh = It->GetMesh();
-			if (Mesh && Mesh->GetSkeletalMeshAsset())
+			if (FindMeshWithAsset(*It))
 			{
 				TalentActor = *It;
 				break;
@@ -92,7 +179,7 @@ void AMyPlayerController::FindTalent()
 
 USkeletalMeshComponent* AMyPlayerController::GetTalentMesh() const
 {
-	return TalentActor ? TalentActor->FindComponentByClass<USkeletalMeshComponent>() : nullptr;
+	return FindMeshWithAsset(TalentActor);
 }
 
 FVector AMyPlayerController::GetFocusLocation() const
@@ -131,6 +218,7 @@ void AMyPlayerController::SetupBroadcastCamera()
 	{
 		BroadcastCamera = Cast<ACineCameraActor>(Existing);
 		SetViewTargetWithBlend(Existing);
+		bCameraReady = true;
 		UE_LOG(LogInBang, Log, TEXT("레벨의 카메라 사용: %s"), *Existing->GetName());
 		return;
 	}
@@ -163,6 +251,7 @@ void AMyPlayerController::SetupBroadcastCamera()
 	Camera->Tags.Add(CameraActorTag);
 	BroadcastCamera = Camera;
 	SetViewTargetWithBlend(Camera);
+	bCameraReady = true;
 	UE_LOG(LogInBang, Log, TEXT("방송 카메라 자동 생성 (거리 %.0fcm, %.0fmm)"), CameraDistance, CameraFocalLength);
 }
 
@@ -176,11 +265,6 @@ void AMyPlayerController::SpawnBackdrop()
 		{
 			return; // 이미 배경이 있음
 		}
-	}
-
-	if (!TalentActor)
-	{
-		return;
 	}
 
 	UStaticMesh* PlaneMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane"));
@@ -232,32 +316,67 @@ void AMyPlayerController::SpawnBackdrop()
 	UE_LOG(LogInBang, Log, TEXT("그린스크린 배경 자동 생성 (%.0fcm 뒤)"), BackdropDistance);
 }
 
-void AMyPlayerController::ApplyExpression(float NeutralWeight, float AltWeight)
+void AMyPlayerController::Face(int32 SlotIndex)
+{
+	if (!ExpressionSlots.IsValidIndex(SlotIndex))
+	{
+		UE_LOG(LogInBang, Warning, TEXT("표정 슬롯 %d 없음 (0~%d)"), SlotIndex, ExpressionSlots.Num() - 1);
+		return;
+	}
+
+	ApplyExpressionString(ExpressionSlots[SlotIndex]);
+	UE_LOG(LogInBang, Log, TEXT("표정 슬롯 %d 적용: %s (모프 %d개)"), SlotIndex, *ExpressionSlots[SlotIndex], TouchedMorphs.Num());
+	OnExpressionChanged(SlotIndex);
+}
+
+void AMyPlayerController::ApplyExpressionString(const FString& Expression)
 {
 	USkeletalMeshComponent* Mesh = GetTalentMesh();
 	if (!Mesh)
 	{
+		UE_LOG(LogInBang, Warning, TEXT("표정 적용 실패: 방송 주인공 메시 없음"));
 		return;
 	}
 
-	if (!bWarnedMissingMorphs)
+	// 이전 표정 리셋
+	for (const FName& Touched : TouchedMorphs)
 	{
-		if (const USkeletalMesh* Asset = Mesh->GetSkeletalMeshAsset())
-		{
-			const bool bHasNeutral = Asset->FindMorphTarget(NeutralMorphTargetName) != nullptr;
-			const bool bHasAlt = Asset->FindMorphTarget(AltMorphTargetName) != nullptr;
-			if (!bHasNeutral || !bHasAlt)
-			{
-				bWarnedMissingMorphs = true;
-				UE_LOG(LogInBang, Warning,
-					TEXT("모프타겟 '%s'/'%s'가 %s에 없습니다. 콘솔(~)에서 ListMorphs로 실제 이름을 확인한 뒤 DefaultGame.ini를 수정하세요."),
-					*NeutralMorphTargetName.ToString(), *AltMorphTargetName.ToString(), *Asset->GetName());
-			}
-		}
+		Mesh->SetMorphTarget(Touched, 0.f);
 	}
+	TouchedMorphs.Reset();
 
-	Mesh->SetMorphTarget(NeutralMorphTargetName, NeutralWeight);
-	Mesh->SetMorphTarget(AltMorphTargetName, AltWeight);
+	const USkeletalMesh* Asset = Mesh->GetSkeletalMeshAsset();
+
+	TArray<FString> Tokens;
+	Expression.ParseIntoArray(Tokens, TEXT(","));
+	for (FString& Token : Tokens)
+	{
+		Token.TrimStartAndEndInline();
+		if (Token.IsEmpty() || Token.Equals(TEXT("None"), ESearchCase::IgnoreCase))
+		{
+			continue;
+		}
+
+		FString NamePart = Token;
+		FString WeightPart;
+		float Weight = 1.f;
+		if (Token.Split(TEXT("="), &NamePart, &WeightPart))
+		{
+			NamePart.TrimStartAndEndInline();
+			Weight = FCString::Atof(*WeightPart);
+		}
+
+		const FName MorphName(*NamePart);
+		if (Asset && !Asset->FindMorphTarget(MorphName))
+		{
+			UE_LOG(LogInBang, Warning, TEXT("모프타겟 '%s'가 %s에 없습니다. 콘솔(~)에서 ListMorphs로 확인하세요."),
+				*NamePart, *Asset->GetName());
+			continue;
+		}
+
+		Mesh->SetMorphTarget(MorphName, Weight);
+		TouchedMorphs.Add(MorphName);
+	}
 }
 
 void AMyPlayerController::RefreshCameraTransform()
@@ -271,18 +390,6 @@ void AMyPlayerController::RefreshCameraTransform()
 	const FVector Forward = TalentActor->GetActorForwardVector();
 	const FVector CameraLocation = Focus + Forward * CameraDistance;
 	BroadcastCamera->SetActorLocationAndRotation(CameraLocation, (Focus - CameraLocation).Rotation());
-}
-
-void AMyPlayerController::HandleNeutralExpression()
-{
-	ApplyExpression(1.f, 0.f);
-	OnNeutralExpressionRequested();
-}
-
-void AMyPlayerController::HandleAltExpression()
-{
-	ApplyExpression(0.f, 1.f);
-	OnAltExpressionRequested();
 }
 
 void AMyPlayerController::ListMorphs()
@@ -325,6 +432,7 @@ void AMyPlayerController::Expr(FName MorphTarget, float Value)
 	if (USkeletalMeshComponent* Mesh = GetTalentMesh())
 	{
 		Mesh->SetMorphTarget(MorphTarget, Value);
+		TouchedMorphs.Add(MorphTarget);
 	}
 }
 
