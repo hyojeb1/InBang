@@ -134,6 +134,69 @@ void AMyPlayerController::SetupStage()
 		SpawnBackdrop();
 		bBackdropReady = true;
 	}
+
+	if (bAutoBlink && !bBlinkActive && TalentActor)
+	{
+		bBlinkActive = true;
+		ScheduleNextBlink();
+		UE_LOG(LogInBang, Log, TEXT("자동 눈 깜빡임 활성 (%.1f~%.1f초 간격)"), BlinkIntervalMin, BlinkIntervalMax);
+	}
+}
+
+void AMyPlayerController::ScheduleNextBlink()
+{
+	const float Delay = FMath::FRandRange(BlinkIntervalMin, FMath::Max(BlinkIntervalMin, BlinkIntervalMax));
+	GetWorldTimerManager().SetTimer(BlinkTimerHandle, this, &AMyPlayerController::StartBlink, Delay, false);
+}
+
+void AMyPlayerController::StartBlink()
+{
+	SetBlinkWeight(1.f);
+	UE_LOG(LogInBang, Verbose, TEXT("깜빡"));
+	GetWorldTimerManager().SetTimer(BlinkTimerHandle, this, &AMyPlayerController::EndBlink, FMath::Max(0.02f, BlinkHoldTime), false);
+}
+
+void AMyPlayerController::EndBlink()
+{
+	SetBlinkWeight(0.f);
+	if (bBlinkActive)
+	{
+		ScheduleNextBlink();
+	}
+}
+
+void AMyPlayerController::SetBlinkWeight(float Weight)
+{
+	USkeletalMeshComponent* Mesh = GetTalentMesh();
+	if (!Mesh)
+	{
+		return;
+	}
+
+	TArray<FString> Names;
+	BlinkMorphs.ParseIntoArray(Names, TEXT(","));
+	for (FString& Name : Names)
+	{
+		Name.TrimStartAndEndInline();
+		Mesh->SetMorphTarget(FName(*Name), Weight);
+	}
+}
+
+void AMyPlayerController::AutoBlink(bool bEnable)
+{
+	bAutoBlink = bEnable;
+
+	if (bEnable && !bBlinkActive && TalentActor)
+	{
+		bBlinkActive = true;
+		ScheduleNextBlink();
+	}
+	else if (!bEnable)
+	{
+		bBlinkActive = false;
+		GetWorldTimerManager().ClearTimer(BlinkTimerHandle);
+		SetBlinkWeight(0.f);
+	}
 }
 
 void AMyPlayerController::FindTalent()

@@ -39,6 +39,10 @@ public:
 	UFUNCTION(Exec)
 	void Expr(FName MorphTarget, float Value);
 
+	// 자동 눈 깜빡임 켜기/끄기: AutoBlink true / AutoBlink false
+	UFUNCTION(Exec)
+	void AutoBlink(bool bEnable);
+
 	// 카메라 거리(cm): CamDist 200
 	UFUNCTION(Exec)
 	void CamDist(float Distance);
@@ -83,6 +87,23 @@ protected:
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera")
 	float CameraFocalLength = 50.f;
 
+	// 자동 눈 깜빡임 (표정과 무관하게 위에 얹힌다)
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
+	bool bAutoBlink = true;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
+	FString BlinkMorphs = TEXT("Eye_Blink_L,Eye_Blink_R");
+
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
+	float BlinkIntervalMin = 2.f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
+	float BlinkIntervalMax = 6.f;
+
+	// 눈 감고 있는 시간(초)
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
+	float BlinkHoldTime = 0.12f;
+
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen")
 	bool bSpawnGreenScreenBackdrop = true;
 
@@ -115,6 +136,11 @@ private:
 	// "모프이름=가중치,..." 문자열을 파싱해 적용. 이전 표정은 자동 리셋
 	void ApplyExpressionString(const FString& Expression);
 
+	void ScheduleNextBlink();
+	void StartBlink();
+	void EndBlink();
+	void SetBlinkWeight(float Weight);
+
 	UPROPERTY()
 	TObjectPtr<AActor> TalentActor;
 
@@ -124,6 +150,9 @@ private:
 	// 표정 전환 시 리셋해야 하는, 지금까지 건드린 모프들
 	TSet<FName> TouchedMorphs;
 
+	FTimerHandle BlinkTimerHandle;
+
 	bool bCameraReady = false;
 	bool bBackdropReady = false;
+	bool bBlinkActive = false;
 };
