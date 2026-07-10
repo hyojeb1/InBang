@@ -279,11 +279,19 @@
     </div>
 
     <div class="card">
-      <h3>실행 (에디터 필요 없음)</h3>
-      <pre><span class="comment"># OBS 캡처용 창모드 실행</span>
+      <h3>실행 (별도 Game 프로세스)</h3>
+      <pre><span class="comment"># 권장: 저장소 위치와 UE 5.7 설치 경로를 자동 탐색</span>
+run-avatar-capture.cmd
+
+<span class="comment"># 수동 실행: 작업 PC에 맞게 PROJECT 경로만 선택</span>
+set PROJECT=C:\Dev\InBang\InBang\InBang.uproject
+<span class="comment"># set PROJECT=C:\Dev\00InBang\InBang\InBang.uproject</span>
+set CAPTURE_USER_DIR=%LOCALAPPDATA%\InBangAvatarCapture
+
 "C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor.exe" ^
-  C:\Dev\00InBang\InBang\InBang.uproject <span class="kw">-game -windowed -ResX=1920 -ResY=1080</span></pre>
-      <p style="margin-top:0.8rem; font-size:0.85rem; color:#666;">또는 에디터에서 Play → Standalone Game</p>
+  "%PROJECT%" /Game/Lvl_GreenScreen ^
+  <span class="kw">-game -AvatarCapture -UserDir="%CAPTURE_USER_DIR%" -windowed -ResX=854 -ResY=480 -log</span></pre>
+      <p style="margin-top:0.8rem; font-size:0.85rem; color:#666;">촬영 창 제목은 <code>InBang Avatar Capture</code>. Unreal 뷰포트만 854×480이며 OBS 캔버스·녹화 해상도는 기존 값을 유지한다. <code>-UserDir</code>로 촬영 설정을 일반 게임 설정과 분리하며, 에디터 내부 PIE는 촬영에 사용하지 않는다.</p>
     </div>
 
     <div class="card">
@@ -331,6 +339,7 @@
         <tr><td><code>Num 5</code></td><td>슬픔</td><td>Brow_Sad_L/R + Mouth_Sad</td></tr>
       </table>
       <p style="margin-top:0.8rem; font-size:0.85rem; color:#666;">조합 수정은 DefaultGame.ini의 <code>+ExpressionSlots=</code> 줄만 고치면 됨. 형식: <code>모프이름,모프이름=0.5</code> (가중치 생략 시 1.0)</p>
+      <p style="margin-top:0.8rem; font-size:0.85rem; color:#666;">촬영 런처의 <code>-AvatarCapture</code> 모드에서는 OBS·채팅창에 포커스가 있어도 넘패드 0~5가 전역 표정키로 동작한다.</p>
     </div>
 
     <div class="card">
@@ -360,13 +369,20 @@
     </div>
 
     <div class="card">
-      <h3>소스 구성</h3>
+      <h3>게임 캡처 (권장)</h3>
       <ul>
-        <li><strong>창 캡처</strong> → Unreal Standalone 창 선택</li>
+        <li><strong>소스 + → 게임 캡처</strong></li>
+        <li>모드 → <strong>특정 윈도우 캡처</strong></li>
+        <li>대상 → <strong>InBang Avatar Capture</strong> (<code>UnrealEditor.exe</code>)</li>
+        <li>캡처 프레임레이트 제한 → <strong>켬</strong></li>
+        <li>커서 캡처 → <strong>끔</strong></li>
+        <li>서드파티 오버레이 캡처 → <strong>끔</strong></li>
+        <li>안티치트 호환성 훅 → <strong>끔</strong> (UnrealEditor 촬영에는 불필요)</li>
         <li>필터 → <strong>크로마키</strong> → 색상: #00FF00, 유사도 400, 부드러움 80</li>
         <li>게임 캡처 레이어 위에 오버레이로 배치</li>
         <li>키잉 품질이 아쉬우면: 에디터에서 언릿 초록 머티리얼을 <code>/Game/M_GreenScreen</code>으로 만들기만 하면 자동 사용됨</li>
       </ul>
+      <p style="margin-top:0.8rem; font-size:0.85rem; color:#666;"><strong>대체 순서:</strong> 게임 캡처가 실패할 때만 윈도우 캡처를 사용한다. 디스플레이 캡처는 진단용 또는 최후 수단이다. DX12 게임 캡처만 계속 실패하면 <code>run-avatar-capture.cmd -dx11</code>로 한 번 진단하되 기본 실행 옵션으로 저장하지 않는다.</p>
     </div>
 
     <div class="card">
@@ -493,7 +509,7 @@ echo <span class="str">"완료: ${STEM}_mic.wav.srt"</span></pre>
         <li><div class="check-box done"></div>불필요 콘텐츠 정리 (LeDuat UI · FirstPerson/DemoTemplate 템플릿)</li>
         <li><div class="check-box next"></div>World Settings GameMode Override 비우기 (에디터 1분)</li>
         <li><div class="check-box next"></div>Huion Key-Dial → 넘패드 0~5 매핑</li>
-        <li><div class="check-box next"></div>OBS 창 캡처 + 크로마키 설정</li>
+        <li><div class="check-box next"></div>OBS 게임 캡처 + 크로마키 설정</li>
         <li><div class="check-box next"></div>OBS 오디오 트랙 2번 마이크 분리</li>
         <li><div class="check-box next"></div>치지직 RTMP 스트림 키 연결</li>
         <li><div class="check-box"></div>음성 방향 결정 (본인 목소리 / 보이스체인저 / TTS)</li>

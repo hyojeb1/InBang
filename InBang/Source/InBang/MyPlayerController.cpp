@@ -7,16 +7,26 @@
 #include "Components/InputComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Engine/GameViewportClient.h"
 #include "Engine/Engine.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "EngineUtils.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/GameUserSettings.h"
 #include "InputCoreTypes.h"
+#include "Misc/App.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "TimerManager.h"
+#include "Widgets/SWindow.h"
+
+#if PLATFORM_WINDOWS
+#include "Windows/WindowsHWrapper.h"
+#endif
 
 DEFINE_LOG_CATEGORY_STATIC(LogInBang, Log, All);
 
@@ -64,6 +74,7 @@ void AMyPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
+	ConfigureAvatarCapture();
 	SetupStage();
 
 	// 다른 액터의 초기화가 아직 안 끝났을 수 있으니 못 찾았으면 한 번 재시도
@@ -72,6 +83,70 @@ void AMyPlayerController::BeginPlay()
 		FTimerHandle RetryHandle;
 		GetWorldTimerManager().SetTimer(RetryHandle, this, &AMyPlayerController::SetupStage, 0.5f, false);
 	}
+}
+
+void AMyPlayerController::PlayerTick(float DeltaTime)
+{
+	Super::PlayerTick(DeltaTime);
+
+	if (bAvatarCaptureMode && !FApp::HasFocus())
+	{
+		PollGlobalExpressionKeys();
+	}
+}
+
+void AMyPlayerController::ConfigureAvatarCapture()
+{
+	if (!FParse::Param(FCommandLine::Get(), TEXT("AvatarCapture")))
+	{
+		return;
+	}
+	bAvatarCaptureMode = true;
+
+	if (UGameUserSettings* UserSettings = GEngine ? GEngine->GetGameUserSettings() : nullptr)
+	{
+		UserSettings->SetFullscreenMode(EWindowMode::Windowed);
+		UserSettings->SetScreenResolution(FIntPoint(854, 480));
+		UserSettings->ApplyResolutionSettings(false);
+	}
+
+	// Resolution changes can recreate the Slate window, so title and size verification run next tick.
+	GetWorldTimerManager().SetTimerForNextTick(this, &AMyPlayerController::FinalizeAvatarCaptureWindow);
+}
+
+void AMyPlayerController::PollGlobalExpressionKeys()
+{
+#if PLATFORM_WINDOWS
+	for (int32 Index = 0; Index < UE_ARRAY_COUNT(GlobalNumPadKeyStates); ++Index)
+	{
+		const bool bIsDown = (::GetAsyncKeyState(VK_NUMPAD0 + Index) & 0x8000) != 0;
+		if (bIsDown && !GlobalNumPadKeyStates[Index] && ExpressionSlots.IsValidIndex(Index))
+		{
+			Face(Index);
+		}
+		GlobalNumPadKeyStates[Index] = bIsDown;
+	}
+#endif
+}
+
+void AMyPlayerController::FinalizeAvatarCaptureWindow()
+{
+	FIntPoint ViewportSize = FIntPoint::ZeroValue;
+	if (GEngine && GEngine->GameViewport)
+	{
+		if (TSharedPtr<SWindow> GameWindow = GEngine->GameViewport->GetWindow())
+		{
+			GameWindow->SetTitle(FText::FromString(TEXT("InBang Avatar Capture")));
+		}
+
+		if (GEngine->GameViewport->Viewport)
+		{
+			ViewportSize = GEngine->GameViewport->Viewport->GetSizeXY();
+		}
+	}
+
+	UE_LOG(LogInBang, Log, TEXT("AvatarCapture 활성: Windowed, 뷰포트 %dx%d, 창 제목 'InBang Avatar Capture'"),
+		ViewportSize.X, ViewportSize.Y);
 }
 
 //! \brief 언리얼 엔진의 F1

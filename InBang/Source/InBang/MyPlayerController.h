@@ -12,7 +12,7 @@ class ACineCameraActor;
  *  1. 레벨에서 네페르(태그 "Nefer" 또는 첫 번째 캐릭터)를 찾고
  *  2. 카메라가 없으면 버스트샷 CineCamera를 자동 생성하고
  *  3. 그린스크린 배경 판을 자동 생성한다.
- * F1~F12 = ExpressionSlots에 정의된 표정 프리셋 전환.
+ * Numpad 0~5 = ExpressionSlots에 정의된 표정 프리셋 전환.
  * 세부 값은 DefaultGame.ini [/Script/InBang.MyPlayerController]에서 수정.
  */
 UCLASS(Config = Game)
@@ -24,6 +24,7 @@ public:
 	AMyPlayerController();
 
 	virtual void BeginPlay() override;
+	virtual void PlayerTick(float DeltaTime) override;
 
 	// 표정 슬롯 적용 (0 = F1). 콘솔/BP 어디서든 호출 가능
 	UFUNCTION(Exec, BlueprintCallable, Category = "Broadcast|Expression")
@@ -124,6 +125,9 @@ protected:
 	FSoftObjectPath BackdropMaterialPath = FSoftObjectPath(TEXT("/Game/M_GreenScreen.M_GreenScreen"));
 
 private:
+	void ConfigureAvatarCapture();
+	void FinalizeAvatarCaptureWindow();
+	void PollGlobalExpressionKeys();
 	void SetupStage();
 	void FindTalent();
 	void SetupBroadcastCamera();
@@ -155,4 +159,6 @@ private:
 	bool bCameraReady = false;
 	bool bBackdropReady = false;
 	bool bBlinkActive = false;
+	bool bAvatarCaptureMode = false;
+	bool GlobalNumPadKeyStates[6] = {};
 };
