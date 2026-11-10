@@ -33,7 +33,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogInBang, Log, All);
 namespace
 {
 	// 액터의 스켈레탈 메시 컴포넌트 중 실제 메시 에셋이 있는 첫 번째를 반환.
-	// (BP_Nefer는 캐릭터 기본 Mesh가 아닌 자식 컴포넌트에 메시가 붙어있다)
+	// (아바타 BP는 캐릭터 기본 Mesh가 아닌 자식 컴포넌트에 메시를 붙이는 경우가 많다)
 	USkeletalMeshComponent* FindMeshWithAsset(const AActor* Actor)
 	{
 		if (!Actor)
@@ -59,14 +59,14 @@ AMyPlayerController::AMyPlayerController()
 	// 폰 빙의 시 뷰타겟이 폰으로 돌아가지 않도록 직접 관리
 	bAutoManageActiveCameraTarget = false;
 
-	// F1부터 순서대로. DefaultGame.ini의 +ExpressionSlots가 있으면 그쪽이 우선
+	// Numpad0부터 순서대로. DefaultGame.ini의 +ExpressionSlots가 있으면 그쪽이 우선.
+	// 기본값은 ARKit 블렌드셰이프 이름 (Live Link Face / Audio2Face와 같은 규격)
 	ExpressionSlots = {
-		TEXT("None"),                                               // 1키 : 기본
-		TEXT("Eye_Smile_Closed_L,Eye_Smile_Closed_R,Mouth_Smile"),  // 2키 : 스마일
-		TEXT("Eye_Joy_L,Eye_Joy_R,Mouth_joy"),                      // 3키 : 기쁨
-		TEXT("Eye_Star_L,Eye_Star_R,Mouth_A"),                      // 4키 : 반짝
-		TEXT("Brow_Angry_L,Brow_Angry_R,Mouth_Angry"),              // 5키 : 화남
-		TEXT("Brow_Sad_L,Brow_Sad_R,Mouth_Sad"),                    // 6키 : 슬픔
+		TEXT("None"),                                                                       // 0 : 기본
+		TEXT("mouthSmileLeft,mouthSmileRight,eyeSquintLeft=0.6,eyeSquintRight=0.6"),        // 1 : 스마일
+		TEXT("jawOpen=0.5,eyeWideLeft,eyeWideRight,browOuterUpLeft,browOuterUpRight"),      // 2 : 놀람
+		TEXT("browDownLeft,browDownRight,mouthFrownLeft,mouthFrownRight"),                  // 3 : 화남
+		TEXT("browInnerUp,mouthFrownLeft=0.6,mouthFrownRight=0.6"),                         // 4 : 슬픔
 	};
 }
 
@@ -117,7 +117,7 @@ void AMyPlayerController::ConfigureAvatarCapture()
 void AMyPlayerController::PollGlobalExpressionKeys()
 {
 #if PLATFORM_WINDOWS
-	for (int32 Index = 0; Index < UE_ARRAY_COUNT(GlobalNumPadKeyStates); ++Index)
+	for (int32 Index = 0; Index < MaxExpressionKeys; ++Index)
 	{
 		const bool bIsDown = (::GetAsyncKeyState(VK_NUMPAD0 + Index) & 0x8000) != 0;
 		if (bIsDown && !GlobalNumPadKeyStates[Index] && ExpressionSlots.IsValidIndex(Index))
@@ -149,25 +149,7 @@ void AMyPlayerController::FinalizeAvatarCaptureWindow()
 		ViewportSize.X, ViewportSize.Y);
 }
 
-//! \brief 언리얼 엔진의 F1
-//void AMyPlayerController::SetupInputComponent()
-//{
-//	Super::SetupInputComponent();
-//
-//	const int32 NumSlots = FMath::Min(ExpressionSlots.Num(), 12);
-//	for (int32 Index = 0; Index < NumSlots; ++Index)
-//	{
-//		const FKey Key(*FString::Printf(TEXT("F%d"), Index + 1));
-//		FInputKeyBinding Binding(FInputChord(Key), IE_Pressed);
-//		Binding.KeyDelegate.GetDelegateForManualSet().BindWeakLambda(this, [this, Index]()
-//		{
-//			Face(Index);
-//		});
-//		InputComponent->KeyBindings.Add(MoveTemp(Binding));
-//	}
-//}
-
-//! \brief 언리얼 엔진의 넘패드 키
+// 창에 포커스가 있을 때의 넘패드 표정 전환 (포커스가 없을 땐 PollGlobalExpressionKeys)
 void AMyPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();

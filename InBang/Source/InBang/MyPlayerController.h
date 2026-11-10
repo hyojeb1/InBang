@@ -9,10 +9,11 @@ class ACineCameraActor;
 /**
  * 버튜버 방송용 컨트롤러.
  * BeginPlay에서 알아서 방송 무대를 구성하므로 BP 작업이 필요 없다:
- *  1. 레벨에서 네페르(태그 "Nefer" 또는 첫 번째 캐릭터)를 찾고
+ *  1. 레벨에서 아바타(태그 "Talent" 또는 첫 번째 스켈레탈 캐릭터)를 찾고
  *  2. 카메라가 없으면 버스트샷 CineCamera를 자동 생성하고
  *  3. 그린스크린 배경 판을 자동 생성한다.
- * Numpad 0~5 = ExpressionSlots에 정의된 표정 프리셋 전환.
+ * Numpad 0~9 = ExpressionSlots에 정의된 표정 프리셋 전환.
+ * -AvatarCapture 실행 시 창 포커스가 없어도 넘패드로 표정 전환 가능 (OBS 캡처용).
  * 세부 값은 DefaultGame.ini [/Script/InBang.MyPlayerController]에서 수정.
  */
 UCLASS(Config = Game)
@@ -26,17 +27,17 @@ public:
 	virtual void BeginPlay() override;
 	virtual void PlayerTick(float DeltaTime) override;
 
-	// 표정 슬롯 적용 (0 = F1). 콘솔/BP 어디서든 호출 가능
+	// 표정 슬롯 적용 (0 = Numpad0). 콘솔/BP 어디서든 호출 가능
 	UFUNCTION(Exec, BlueprintCallable, Category = "Broadcast|Expression")
 	void Face(int32 SlotIndex);
 
 	// --- ` 콘솔 명령 (방송 중 실시간 튜닝용) ---
 
-	// 네페르 메시의 모든 모프타겟 이름을 화면/로그에 출력
+	// 아바타 메시의 모든 모프타겟 이름을 화면/로그에 출력
 	UFUNCTION(Exec)
 	void ListMorphs();
 
-	// 모프타겟 하나를 직접 실험: Expr Eye_Joy_L 1.0
+	// 모프타겟 하나를 직접 실험: Expr mouthSmileLeft 1.0
 	UFUNCTION(Exec)
 	void Expr(FName MorphTarget, float Value);
 
@@ -67,9 +68,9 @@ protected:
 
 	// 방송 주인공을 찾을 액터 태그. 없으면 내 폰이 아닌 첫 스켈레탈 캐릭터 사용
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast")
-	FName TalentActorTag = TEXT("Nefer");
+	FName TalentActorTag = TEXT("Talent");
 
-	// 표정 프리셋. 배열 순서대로 F1, F2, ... 에 바인딩된다.
+	// 표정 프리셋. 배열 순서대로 Numpad0, Numpad1, ... 에 바인딩된다 (최대 10개).
 	// 형식: "모프이름,모프이름=0.5" (가중치 생략 시 1.0), "None" = 기본 표정
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Expression")
 	TArray<FString> ExpressionSlots;
@@ -92,8 +93,9 @@ protected:
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
 	bool bAutoBlink = true;
 
+	// 기본값은 ARKit 블렌드셰이프 이름. 모델에 맞게 DefaultGame.ini에서 변경
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
-	FString BlinkMorphs = TEXT("Eye_Blink_L,Eye_Blink_R");
+	FString BlinkMorphs = TEXT("eyeBlinkLeft,eyeBlinkRight");
 
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
 	float BlinkIntervalMin = 2.f;
@@ -125,6 +127,8 @@ protected:
 	FSoftObjectPath BackdropMaterialPath = FSoftObjectPath(TEXT("/Game/M_GreenScreen.M_GreenScreen"));
 
 private:
+	static constexpr int32 MaxExpressionKeys = 10;
+
 	void ConfigureAvatarCapture();
 	void FinalizeAvatarCaptureWindow();
 	void PollGlobalExpressionKeys();
@@ -160,5 +164,5 @@ private:
 	bool bBackdropReady = false;
 	bool bBlinkActive = false;
 	bool bAvatarCaptureMode = false;
-	bool GlobalNumPadKeyStates[6] = {};
+	bool GlobalNumPadKeyStates[MaxExpressionKeys] = {};
 };
