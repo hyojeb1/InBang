@@ -5,17 +5,32 @@
 #include "MyPlayerController.generated.h"
 
 class ACineCameraActor;
+class USkeletalMeshComponent;
 
-/**
- * 버튜버 방송용 컨트롤러.
- * BeginPlay에서 알아서 방송 무대를 구성하므로 BP 작업이 필요 없다:
- *  1. 레벨에서 아바타(태그 "Talent" 또는 첫 번째 스켈레탈 캐릭터)를 찾고
- *  2. 카메라가 없으면 버스트샷 CineCamera를 자동 생성하고
- *  3. (선택) 그린스크린 배경 판을 자동 생성한다. 기본은 꺼짐 — 언리얼 화면 자체가 방송 화면.
- * Numpad 0~9 = ExpressionSlots에 정의된 표정 프리셋 전환.
- * -AvatarCapture 실행 시 창 포커스가 없어도 넘패드로 표정 전환 가능 (OBS 캡처용).
- * 세부 값은 DefaultGame.ini [/Script/InBang.MyPlayerController]에서 수정.
- */
+USTRUCT(BlueprintType)
+struct FMorphWeight
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName Name;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", ClampMax = "1"))
+	float Weight = 1.f;
+};
+
+USTRUCT(BlueprintType)
+struct FExpressionPreset
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName Label;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FMorphWeight> Morphs;
+};
+
 UCLASS(Config = Game)
 class INBANG_API AMyPlayerController : public APlayerController
 {
@@ -27,131 +42,105 @@ public:
 	virtual void BeginPlay() override;
 	virtual void PlayerTick(float DeltaTime) override;
 
-	// 표정 슬롯 적용 (0 = Numpad0). 콘솔/BP 어디서든 호출 가능
 	UFUNCTION(Exec, BlueprintCallable, Category = "Broadcast|Expression")
-	void Face(int32 SlotIndex);
+	void Face(int32 PresetIndex);
 
-	// --- ` 콘솔 명령 (방송 중 실시간 튜닝용) ---
-
-	// 아바타 메시의 모든 모프타겟 이름을 화면/로그에 출력
 	UFUNCTION(Exec)
 	void ListMorphs();
 
-	// 모프타겟 하나를 직접 실험: Expr mouthSmileLeft 1.0
 	UFUNCTION(Exec)
-	void Expr(FName MorphTarget, float Value);
+	void Expr(FName MorphTarget, float Weight);
 
-	// 자동 눈 깜빡임 켜기/끄기: AutoBlink true / AutoBlink false
 	UFUNCTION(Exec)
 	void AutoBlink(bool bEnable);
 
-	// 카메라 거리(cm): CamDist 200
 	UFUNCTION(Exec)
-	void CamDist(float Distance);
+	void CamDist(float Centimeters);
 
-	// 카메라 높이 비율(0=발끝, 1=정수리): CamHeight 0.75
 	UFUNCTION(Exec)
-	void CamHeight(float Ratio);
+	void CamHeight(float RatioFromFeetToHead);
 
-	// 초점거리(mm): CamFocal 35
 	UFUNCTION(Exec)
-	void CamFocal(float FocalLength);
+	void CamFocal(float Millimeters);
 
 protected:
 	virtual void SetupInputComponent() override;
 
-	// 표정 전환에 추가 연출(사운드, 파티클 등)이 필요할 때만 BP에서 구현하는 선택 훅
 	UFUNCTION(BlueprintImplementableEvent, Category = "Broadcast|Expression")
-	void OnExpressionChanged(int32 SlotIndex);
+	void OnExpressionChanged(int32 PresetIndex);
 
-	// --- 설정 (DefaultGame.ini에서 수정 가능) ---
-
-	// 방송 주인공을 찾을 액터 태그. 없으면 내 폰이 아닌 첫 스켈레탈 캐릭터 사용
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast")
 	FName TalentActorTag = TEXT("Talent");
 
-	// 표정 프리셋. 배열 순서대로 Numpad0, Numpad1, ... 에 바인딩된다 (최대 10개).
-	// 형식: "모프이름,모프이름=0.5" (가중치 생략 시 1.0), "None" = 기본 표정
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Expression")
-	TArray<FString> ExpressionSlots;
+	TArray<FExpressionPreset> ExpressionPresets;
 
-	// 이 태그가 붙은 카메라가 레벨에 있으면 그걸 쓰고, 없으면 자동 생성
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera")
 	FName CameraActorTag = TEXT("BroadcastCamera");
 
-	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera")
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera", meta = (Units = "Centimeters", ClampMin = "0"))
 	float CameraDistance = 140.f;
 
-	// 카메라가 바라보는 높이. 0=발끝, 1=정수리 (버스트샷 ≈ 0.8)
-	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera")
-	float CameraFocusHeightRatio = 0.8f;
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera", meta = (ClampMin = "0", ClampMax = "1"))
+	float CameraFocusHeightRatioFromFeet = 0.8f;
 
-	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera")
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera", meta = (Units = "Millimeters", ClampMin = "1"))
 	float CameraFocalLength = 50.f;
 
-	// 자동 눈 깜빡임 (표정과 무관하게 위에 얹힌다)
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
 	bool bAutoBlink = true;
 
-	// 기본값은 ARKit 블렌드셰이프 이름. 모델에 맞게 DefaultGame.ini에서 변경
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
-	FString BlinkMorphs = TEXT("eyeBlinkLeft,eyeBlinkRight");
+	TArray<FName> BlinkMorphs = { TEXT("eyeBlinkLeft"), TEXT("eyeBlinkRight") };
 
-	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink", meta = (Units = "Seconds", ClampMin = "0"))
 	float BlinkIntervalMin = 2.f;
 
-	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink", meta = (Units = "Seconds", ClampMin = "0"))
 	float BlinkIntervalMax = 6.f;
 
-	// 눈 감고 있는 시간(초)
-	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
-	float BlinkHoldTime = 0.12f;
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink", meta = (Units = "Seconds", ClampMin = "0.02"))
+	float BlinkClosedDuration = 0.12f;
 
-	// -AvatarCapture 실행 시 창 해상도 (OBS 게임 캡처 기준 출력 크기)
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Capture")
 	FIntPoint CaptureResolution = FIntPoint(1920, 1080);
 
-	// -AvatarCapture 실행 시 프레임 제한. 송출 fps에 맞추면 GPU 여유가 인코딩에 돌아간다 (0 = 무제한)
-	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Capture")
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Capture", meta = (ClampMin = "0"))
 	float CaptureFrameRateLimit = 60.f;
 
-	// 언리얼 화면을 그대로 방송 화면으로 쓰므로 기본은 끔. OBS 크로마키 합성이 필요할 때만 켠다
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen")
 	bool bSpawnGreenScreenBackdrop = false;
 
-	// 이 태그가 붙은 액터가 이미 있으면 배경을 새로 만들지 않음
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen")
 	FName BackdropActorTag = TEXT("GreenScreen");
 
-	// 캐릭터 뒤로 배경 판을 놓을 거리(cm)
-	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen")
-	float BackdropDistance = 300.f;
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen", meta = (Units = "Centimeters", ClampMin = "0"))
+	float BackdropDistanceBehindTalent = 300.f;
 
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen")
 	FLinearColor BackdropColor = FLinearColor(0.f, 1.f, 0.f);
 
-	// 언릿 단색 머티리얼 에셋을 만들면 여기 경로로 자동 사용 (크로마키 품질 ↑).
-	// 없으면 엔진 기본 머티리얼 + BackdropColor로 대체
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen")
-	FSoftObjectPath BackdropMaterialPath = FSoftObjectPath(TEXT("/Game/M_GreenScreen.M_GreenScreen"));
+	FSoftObjectPath UnlitBackdropMaterial = FSoftObjectPath(TEXT("/Game/M_GreenScreen.M_GreenScreen"));
 
 private:
-	static constexpr int32 MaxExpressionKeys = 10;
+	static constexpr int32 NumPadKeyCount = 10;
+	static constexpr float TalentSearchRetryDelay = 0.5f;
 
 	void ConfigureAvatarCapture();
-	void FinalizeAvatarCaptureWindow();
-	void PollGlobalExpressionKeys();
+	void FinalizeAvatarCaptureWindowAfterResize();
+	void PollNumPadWhileUnfocused();
 	void SetupStage();
 	void FindTalent();
 	void SetupBroadcastCamera();
 	void SpawnBackdrop();
 	void RefreshCameraTransform();
 
-	class USkeletalMeshComponent* GetTalentMesh() const;
+	USkeletalMeshComponent* GetTalentMesh() const;
 	FVector GetFocusLocation() const;
 
-	// "모프이름=가중치,..." 문자열을 파싱해 적용. 이전 표정은 자동 리셋
-	void ApplyExpressionString(const FString& Expression);
+	void ApplyPreset(const FExpressionPreset& Preset);
+	void ResetTouchedMorphs(USkeletalMeshComponent& Mesh);
 
 	void ScheduleNextBlink();
 	void StartBlink();
@@ -164,7 +153,6 @@ private:
 	UPROPERTY()
 	TObjectPtr<ACineCameraActor> BroadcastCamera;
 
-	// 표정 전환 시 리셋해야 하는, 지금까지 건드린 모프들
 	TSet<FName> TouchedMorphs;
 
 	FTimerHandle BlinkTimerHandle;
@@ -173,5 +161,5 @@ private:
 	bool bBackdropReady = false;
 	bool bBlinkActive = false;
 	bool bAvatarCaptureMode = false;
-	bool GlobalNumPadKeyStates[MaxExpressionKeys] = {};
+	bool NumPadKeyWasDown[NumPadKeyCount] = {};
 };

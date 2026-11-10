@@ -8,7 +8,6 @@ public class InBang : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
 
-		// CinematicCamera: 방송 카메라, SlateCore: 아바타 캡처 창 제목 설정
 		PrivateDependencyModuleNames.AddRange(new string[] { "CinematicCamera", "SlateCore" });
 	}
 }
