@@ -11,7 +11,7 @@ class ACineCameraActor;
  * BeginPlay에서 알아서 방송 무대를 구성하므로 BP 작업이 필요 없다:
  *  1. 레벨에서 아바타(태그 "Talent" 또는 첫 번째 스켈레탈 캐릭터)를 찾고
  *  2. 카메라가 없으면 버스트샷 CineCamera를 자동 생성하고
- *  3. 그린스크린 배경 판을 자동 생성한다.
+ *  3. (선택) 그린스크린 배경 판을 자동 생성한다. 기본은 꺼짐 — 언리얼 화면 자체가 방송 화면.
  * Numpad 0~9 = ExpressionSlots에 정의된 표정 프리셋 전환.
  * -AvatarCapture 실행 시 창 포커스가 없어도 넘패드로 표정 전환 가능 (OBS 캡처용).
  * 세부 값은 DefaultGame.ini [/Script/InBang.MyPlayerController]에서 수정.
@@ -107,8 +107,17 @@ protected:
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
 	float BlinkHoldTime = 0.12f;
 
+	// -AvatarCapture 실행 시 창 해상도 (OBS 게임 캡처 기준 출력 크기)
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Capture")
+	FIntPoint CaptureResolution = FIntPoint(1920, 1080);
+
+	// -AvatarCapture 실행 시 프레임 제한. 송출 fps에 맞추면 GPU 여유가 인코딩에 돌아간다 (0 = 무제한)
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Capture")
+	float CaptureFrameRateLimit = 60.f;
+
+	// 언리얼 화면을 그대로 방송 화면으로 쓰므로 기본은 끔. OBS 크로마키 합성이 필요할 때만 켠다
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen")
-	bool bSpawnGreenScreenBackdrop = true;
+	bool bSpawnGreenScreenBackdrop = false;
 
 	// 이 태그가 붙은 액터가 이미 있으면 배경을 새로 만들지 않음
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen")

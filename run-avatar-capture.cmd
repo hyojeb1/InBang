@@ -27,9 +27,9 @@ if not exist "%UNREAL_EDITOR%" (
 
 echo [InBang] Project: %PROJECT_PATH%
 echo [InBang] Unreal:  %UNREAL_EDITOR%
-echo [InBang] Starting /Game/Lvl_Stage at 854x480 Windowed.
+echo [InBang] Starting /Game/Lvl_Stage (window size and fps come from DefaultGame.ini).
 
 set "CAPTURE_USER_DIR=%LOCALAPPDATA%\InBangAvatarCapture"
-start "" "%UNREAL_EDITOR%" "%PROJECT_PATH%" /Game/Lvl_Stage -game -AvatarCapture -UserDir="%CAPTURE_USER_DIR%" -windowed -ResX=854 -ResY=480 -log %*
+start "" "%UNREAL_EDITOR%" "%PROJECT_PATH%" /Game/Lvl_Stage -game -AvatarCapture -UserDir="%CAPTURE_USER_DIR%" -windowed -log %*
 
 endlocal

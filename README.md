@@ -9,11 +9,11 @@ Unreal Engine 5.8 기반 버튜버 방송 무대 프로젝트.
 
 - `InBang/InBang.uproject` — UE 5.8 C++ 프로젝트
 - `InBang/Source/InBang/MyPlayerController` — 방송 컨트롤러
-  - 레벨에서 아바타(태그 `Talent`)를 찾아 버스트샷 카메라 / 그린스크린 자동 구성
+  - 레벨에서 아바타(태그 `Talent`)를 찾아 버스트샷 카메라 자동 구성 (그린스크린 배경은 선택, 기본 꺼짐)
   - Numpad 0~9 표정 프리셋, 자동 눈 깜빡임
   - 콘솔(`~`): `ListMorphs`, `Expr <모프> <값>`, `Face <번호>`, `AutoBlink`, `CamDist`, `CamHeight`, `CamFocal`
 - `InBang/Config/DefaultGame.ini` — 표정 프리셋, 카메라, 깜빡임 설정 (기본값은 ARKit 블렌드셰이프 이름)
-- `run-avatar-capture.cmd` — 854x480 창 모드로 실행 (OBS 캡처용, 창 포커스 없이도 넘패드 동작)
+- `run-avatar-capture.cmd` — 방송 화면 실행 (1920x1080·60fps 창 모드, OBS 게임 캡처용, 포커스 없이도 넘패드 동작)
 
 ## 처음 세팅
 

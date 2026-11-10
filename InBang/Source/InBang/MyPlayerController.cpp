@@ -106,8 +106,10 @@ void AMyPlayerController::ConfigureAvatarCapture()
 	if (UGameUserSettings* UserSettings = GEngine ? GEngine->GetGameUserSettings() : nullptr)
 	{
 		UserSettings->SetFullscreenMode(EWindowMode::Windowed);
-		UserSettings->SetScreenResolution(FIntPoint(854, 480));
-		UserSettings->ApplyResolutionSettings(false);
+		UserSettings->SetScreenResolution(CaptureResolution);
+		UserSettings->SetFrameRateLimit(FMath::Max(0.f, CaptureFrameRateLimit));
+		UserSettings->SetVSyncEnabled(false);
+		UserSettings->ApplySettings(false);
 	}
 
 	// Resolution changes can recreate the Slate window, so title and size verification run next tick.
@@ -145,8 +147,8 @@ void AMyPlayerController::FinalizeAvatarCaptureWindow()
 		}
 	}
 
-	UE_LOG(LogInBang, Log, TEXT("AvatarCapture 활성: Windowed, 뷰포트 %dx%d, 창 제목 'InBang Avatar Capture'"),
-		ViewportSize.X, ViewportSize.Y);
+	UE_LOG(LogInBang, Log, TEXT("AvatarCapture 활성: Windowed, 뷰포트 %dx%d (요청 %dx%d), %.0ffps 제한, 창 제목 'InBang Avatar Capture'"),
+		ViewportSize.X, ViewportSize.Y, CaptureResolution.X, CaptureResolution.Y, CaptureFrameRateLimit);
 }
 
 // 창에 포커스가 있을 때의 넘패드 표정 전환 (포커스가 없을 땐 PollGlobalExpressionKeys)
