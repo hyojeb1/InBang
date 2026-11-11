@@ -1,8 +1,8 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.7",
+	"EngineAssociation": "5.8",
 	"Category": "",
-	"Description": "",
+	"Description": "InBang VTuber broadcast stage",
 	"Modules": [
 		{
 			"Name": "InBang",
@@ -12,39 +12,28 @@
 	],
 	"Plugins": [
 		{
-			"Name": "ModelingToolsEditorMode",
-			"Enabled": true,
-			"TargetAllowList": [
-				"Editor"
-			]
-		},
-		{
-			"Name": "Landmass",
+			"Name": "MetaHumanCharacter",
 			"Enabled": true
 		},
 		{
-			"Name": "InEditorDocumentation",
-			"Enabled": true,
-			"TargetAllowList": [
-				"Editor"
-			],
-			"PlatformAllowList": [
-				"Win64",
-				"Mac",
-				"Linux"
-			]
-		},
-		{
-			"Name": "AIAssistant",
+			"Name": "RigLogic",
 			"Enabled": true
 		},
 		{
-			"Name": "Calculator",
+			"Name": "LiveLink",
 			"Enabled": true
 		},
 		{
-			"Name": "CommonUI",
+			"Name": "PythonScriptPlugin",
 			"Enabled": true
+		},
+		{
+			"Name": "EditorScriptingUtilities",
+			"Enabled": true
+		},
+		{
+			"Name": "AndroidFileServer",
+			"Enabled": false
 		}
 	]
 }

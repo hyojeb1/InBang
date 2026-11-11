@@ -14,6 +14,7 @@ InBang/.vs/
 .vscode/
 .idea/
 *.sln
+*.slnx
 *.vsconfig
 *.suo
 *.user
