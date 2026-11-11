@@ -6,15 +6,23 @@ Unreal Engine 5.8 버튜버 방송 무대. 언리얼 화면을 그대로 OBS 게
 
 ## 처음 세팅
 
-1. UE 5.8 설치
-2. `InBang/InBang.uproject` 우클릭 → Generate Visual Studio project files → 빌드
-3. 아바타를 레벨에 배치하고 액터 태그 `Talent` 추가
-4. 레벨을 `/Game/Lvl_Stage`로 저장하고 `InBang/Config/DefaultEngine.ini`의 `[/Script/EngineSettings.GameMapsSettings]`에 추가
-   ```ini
-   EditorStartupMap=/Game/Lvl_Stage.Lvl_Stage
-   GameDefaultMap=/Game/Lvl_Stage.Lvl_Stage
-   ```
-5. 콘솔(`~`)에서 `ListMorphs`로 모프 이름 확인 → `InBang/Config/DefaultGame.ini`의 `ExpressionPresets` 수정
+1. UE 5.8 설치 후 `verify.ps1` 실행 (빌드 + 헤드리스 검증)
+2. 탤런트를 새로 만들 때만: 아래 명령으로 MetaHuman 생성 → Auto-Rig → 텍스처 → 조립 → `Lvl_Stage` 배치까지 실행한다. Auto-Rig에서 브라우저 Epic 로그인이 열리며 10분 안에 허용까지 눌러야 한다. 조립은 TextureGraph가 커맨드릿에서 꺼지므로 `UnrealEditor-Cmd -run=pythonscript`가 아니라 에디터 창으로 실행해야 한다.
+3. `verify.ps1` → 마지막 줄이 `VERIFY result=PASS`인지 확인
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor.exe' InBang\InBang.uproject -ExecutePythonScript="InBang/Scripts/make_talent_metahuman.py"
+```
+
+검증 로그의 `VERIFY bind`가 실패하고 얼굴 스켈레톤(`skeleton=` 값)이 바뀌었다면 얼굴 ABP를 그 스켈레톤으로 다시 만든다.
+
+```powershell
+& 'C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' InBang\InBang.uproject -run=pythonscript -script="InBang/Scripts/make_talent_face_abp.py <스켈레톤 경로>"
+```
+
+## 검증
+
+`verify.ps1` 출력은 `LogInBang` 줄만이다. `-SkipBuild`, `-NoStageVerify -ExecCmds "DumpMeshCurves <경로>,quit"`로 빌드 생략·커브 덤프만 할 수 있다. 엔진 전체 로그는 `InBang/Saved/Verify/run.log`.
 
 ## 방송
 
@@ -24,6 +32,6 @@ Unreal Engine 5.8 버튜버 방송 무대. 언리얼 화면을 그대로 OBS 게
 
 ## 콘솔 명령
 
-`Face <번호>` · `ListMorphs` · `Expr <모프> <가중치>` · `AutoBlink <true|false>` · `CamDist <cm>` · `CamHeight <0~1>` · `CamFocal <mm>`
+`Face <번호>` · `Expr <커브> <가중치>` · `DumpFaceCurves` · `DumpMeshCurves <SkeletalMesh 경로>` · `AutoBlink <true|false>` · `CamDist <cm>` · `CamHeight <cm>` · `CamFocal <mm>` · `VerifyStage`
 
-설정 값의 의미와 단위는 `InBang/Source/InBang/MyPlayerController.h`의 프로퍼티 이름과 `Units`/`Clamp` 메타데이터가 기준이다.
+설정 값의 의미와 단위는 `InBang/Source/InBang/MyPlayerController.h`의 프로퍼티 이름과 `Units`/`Clamp` 메타데이터가 기준이다. 표정 커브 이름은 `DumpFaceCurves`가 출력하는 `rigControl=` 목록 중에서 고른다.

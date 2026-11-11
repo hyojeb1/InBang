@@ -8,6 +8,6 @@ public class InBang : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "CinematicCamera", "SlateCore" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "CinematicCamera", "SlateCore", "RigLogicModule" });
 	}
 }

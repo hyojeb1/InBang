@@ -5,15 +5,17 @@
 #include "MyPlayerController.generated.h"
 
 class ACineCameraActor;
+class USkeletalMesh;
 class USkeletalMeshComponent;
+class UTalentFaceAnimInstance;
 
 USTRUCT(BlueprintType)
-struct FMorphWeight
+struct FCurveWeight
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName Name;
+	FName Curve;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", ClampMax = "1"))
 	float Weight = 1.f;
@@ -28,7 +30,18 @@ struct FExpressionPreset
 	FName Label;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<FMorphWeight> Morphs;
+	TArray<FCurveWeight> Curves;
+};
+
+struct FCurveReadback
+{
+	int32 Requested = 0;
+	int32 Applied = 0;
+	int32 ActiveMorphs = 0;
+	double MaxJointDeltaCm = 0.0;
+	TArray<FName> Missing;
+
+	bool AllApplied() const { return Applied == Requested && Missing.IsEmpty(); }
 };
 
 UCLASS(Config = Game)
@@ -46,10 +59,13 @@ public:
 	void Face(int32 PresetIndex);
 
 	UFUNCTION(Exec)
-	void ListMorphs();
+	void Expr(FName Curve, float Weight);
 
 	UFUNCTION(Exec)
-	void Expr(FName MorphTarget, float Weight);
+	void DumpFaceCurves();
+
+	UFUNCTION(Exec)
+	void DumpMeshCurves(const FString& SkeletalMeshPath);
 
 	UFUNCTION(Exec)
 	void AutoBlink(bool bEnable);
@@ -58,10 +74,13 @@ public:
 	void CamDist(float Centimeters);
 
 	UFUNCTION(Exec)
-	void CamHeight(float RatioFromFeetToHead);
+	void CamHeight(float CentimetersFromFocusBone);
 
 	UFUNCTION(Exec)
 	void CamFocal(float Millimeters);
+
+	UFUNCTION(Exec)
+	void VerifyStage();
 
 protected:
 	virtual void SetupInputComponent() override;
@@ -72,6 +91,15 @@ protected:
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast")
 	FName TalentActorTag = TEXT("Talent");
 
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Face")
+	FName FaceComponentName = TEXT("Face");
+
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Face")
+	FName BodyComponentName = TEXT("Body");
+
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Face")
+	TSoftClassPtr<UTalentFaceAnimInstance> FaceAnimClass;
+
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Expression")
 	TArray<FExpressionPreset> ExpressionPresets;
 
@@ -79,10 +107,16 @@ protected:
 	FName CameraActorTag = TEXT("BroadcastCamera");
 
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera", meta = (Units = "Centimeters", ClampMin = "0"))
-	float CameraDistance = 140.f;
+	float CameraDistance = 180.f;
 
-	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera", meta = (ClampMin = "0", ClampMax = "1"))
-	float CameraFocusHeightRatioFromFeet = 0.8f;
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera")
+	FName CameraFocusBone = TEXT("head");
+
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera", meta = (Units = "Centimeters"))
+	float CameraFocusOffsetAboveBone = 0.f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera", meta = (Units = "Degrees", ClampMin = "0", ClampMax = "90"))
+	float VerifyMaxCameraAngleFromTalentFront = 20.f;
 
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Camera", meta = (Units = "Millimeters", ClampMin = "1"))
 	float CameraFocalLength = 50.f;
@@ -91,7 +125,7 @@ protected:
 	bool bAutoBlink = true;
 
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink")
-	TArray<FName> BlinkMorphs = { TEXT("eyeBlinkLeft"), TEXT("eyeBlinkRight") };
+	TArray<FName> BlinkCurves;
 
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Blink", meta = (Units = "Seconds", ClampMin = "0"))
 	float BlinkIntervalMin = 2.f;
@@ -123,39 +157,75 @@ protected:
 	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|GreenScreen")
 	FSoftObjectPath UnlitBackdropMaterial = FSoftObjectPath(TEXT("/Game/M_GreenScreen.M_GreenScreen"));
 
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Verify", meta = (Units = "Seconds", ClampMin = "0.05"))
+	float VerifyStepInterval = 0.3f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Broadcast|Verify", meta = (Units = "Seconds", ClampMin = "0"))
+	float VerifyStartDelay = 1.f;
+
 private:
 	static constexpr int32 NumPadKeyCount = 10;
 	static constexpr float TalentSearchRetryDelay = 0.5f;
+	static constexpr float CurveReadbackTolerance = 0.01f;
+	static constexpr double DeformedJointDeltaCm = 0.05;
 
 	void ConfigureAvatarCapture();
 	void FinalizeAvatarCaptureWindowAfterResize();
 	void PollNumPadWhileUnfocused();
 	void SetupStage();
 	void FindTalent();
+	void BindTalentMeshes();
 	void SetupBroadcastCamera();
 	void SpawnBackdrop();
 	void RefreshCameraTransform();
 
-	USkeletalMeshComponent* GetTalentMesh() const;
 	FVector GetFocusLocation() const;
+	FVector GetTalentFacingDirection() const;
+	double GetCameraAngleFromTalentFront() const;
+	bool IsWorldPointInCameraFrame(const FVector& WorldPoint) const;
+	bool IsFaceInCameraFrame() const;
 
-	void ApplyPreset(const FExpressionPreset& Preset);
-	void ResetTouchedMorphs(USkeletalMeshComponent& Mesh);
+	void PushFaceCurves();
+	FCurveReadback ReadBackFaceCurves(const TMap<FName, float>& Expected) const;
 
 	void ScheduleNextBlink();
 	void StartBlink();
 	void EndBlink();
 	void SetBlinkWeight(float Weight);
+	void StopAutoBlink();
+
+	static TArray<FName> ReadRigControlNames(USkeletalMesh* Mesh);
+	static void LogMeshCurves(const FString& Source, USkeletalMesh* Mesh);
+
+	void BuildVerifySteps();
+	void RunNextVerifyStep();
+	void RecordVerify(bool bPassed, const FString& Line);
 
 	UPROPERTY()
 	TObjectPtr<AActor> TalentActor;
 
 	UPROPERTY()
+	TObjectPtr<USkeletalMeshComponent> FaceMesh;
+
+	UPROPERTY()
+	TObjectPtr<USkeletalMeshComponent> BodyMesh;
+
+	UPROPERTY()
 	TObjectPtr<ACineCameraActor> BroadcastCamera;
 
-	TSet<FName> TouchedMorphs;
+	TSet<FName> RigControlNames;
+	TMap<FName, float> PresetCurves;
+	TMap<FName, float> ManualCurves;
+	float BlinkWeight = 0.f;
 
 	FTimerHandle BlinkTimerHandle;
+	FTimerHandle VerifyTimerHandle;
+	TArray<TFunction<void()>> VerifySteps;
+	TArray<FVector> NeutralJointLocations;
+	int32 NeutralActiveMorphs = 0;
+	int32 NextVerifyStep = 0;
+	int32 VerifyFailures = 0;
+	bool bQuitAfterVerify = false;
 
 	bool bCameraReady = false;
 	bool bBackdropReady = false;
